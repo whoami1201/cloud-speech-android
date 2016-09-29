@@ -9,9 +9,7 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.speech.v1beta1.RecognitionConfig;
 import com.google.cloud.speech.v1beta1.RecognitionConfig.AudioEncoding;
 import com.google.cloud.speech.v1beta1.SpeechGrpc;
-import com.google.cloud.speech.v1beta1.SpeechRecognitionAlternative;
 import com.google.cloud.speech.v1beta1.StreamingRecognitionConfig;
-import com.google.cloud.speech.v1beta1.StreamingRecognitionResult;
 import com.google.cloud.speech.v1beta1.StreamingRecognizeRequest;
 import com.google.cloud.speech.v1beta1.StreamingRecognizeResponse;
 import com.google.protobuf.ByteString;
@@ -48,7 +46,7 @@ public class StreamingRecognizeClient implements StreamObserver<StreamingRecogni
 
     private static final List<String> OAUTH2_SCOPES =
             Arrays.asList("https://www.googleapis.com/auth/cloud-platform");
-    private StreamingRecognizeResponse.EndpointerType lastEndPointer;
+    private TextView textView;
 
 
     /**
@@ -93,43 +91,27 @@ public class StreamingRecognizeClient implements StreamObserver<StreamingRecogni
 
     @Override
     public void onNext(final StreamingRecognizeResponse response) {
+        Log.i(getClass().getSimpleName(), "Received response: " + TextFormat.printToString(response));
         mActivity.runOnUiThread(new Runnable() {
-            String stringResponse = "";
             @Override
             public void run() {
                 Log.i("-----------------","-------------------");
-//                if (response.getResultsCount() > 0){
-//                    if (response.getResults(0).getAlternativesCount() > 0) {
-//                        stringResponse = ;
-////                        TextView txtOutput = (TextView) mActivity.findViewById(R.id.txtOutput);
-////                        txtOutput.setText(response.getResults(0).getAlternatives(0).getTranscript());
-//                    }
-//                }
-
                 StreamingRecognizeResponse.EndpointerType endPointerType = response.getEndpointerType();
 
-                Log.i("endPointerType", response.getEndpointerType().name());
-                Log.i("lastEndPointer is null","" + (lastEndPointer == null));
-                if (lastEndPointer != null) {
-                    Log.i("lastEndPointer", lastEndPointer.name());
-                }
-                Log.i("stringResponse", stringResponse);
-
-                if (endPointerType.equals(StreamingRecognizeResponse.EndpointerType.ENDPOINTER_EVENT_UNSPECIFIED)) {
-                    Log.i(getClass().getSimpleName(), "Received response: " + TextFormat.printToString(response));
-                    Log.i("Result Count:", "" + response.getResultsCount());
-                    if (response.getResultsCount() > 0){
-                        if (response.getResults(0).getAlternativesCount() > 0) {
-                            if (response.getResults(0).getIsFinal()) {
-                                linearLayout.addView(createNewTextView(response.getResults(0).getAlternatives(0).getTranscript()));
+                switch (endPointerType){
+                    case START_OF_SPEECH:
+                        textView = createNewTextView("");
+                        linearLayout.addView(textView);
+                        break;
+                    case ENDPOINTER_EVENT_UNSPECIFIED:
+                        if (response.getResultsCount() > 0){
+                            if (response.getResults(0).getAlternativesCount() > 0) {
+                                textView.setText(response.getResults(0).getAlternatives(0).getTranscript());
                             }
-//                            TextView txtOutput = (TextView) mActivity.findViewById(R.id.txtOutput);
-//                            txtOutput.setText(response.getResults(0).getAlternatives(0).getTranscript());
                         }
-                    }
+                        break;
                 }
 
-                lastEndPointer = endPointerType;
             }
         });
     }
