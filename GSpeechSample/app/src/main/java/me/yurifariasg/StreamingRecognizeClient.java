@@ -1,8 +1,11 @@
 package me.yurifariasg;
 
 import android.app.Activity;
+import android.graphics.Typeface;
 import android.util.Log;
+import android.util.TypedValue;
 import android.widget.LinearLayout;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.google.auth.oauth2.GoogleCredentials;
@@ -28,6 +31,7 @@ import io.grpc.auth.ClientAuthInterceptor;
 import io.grpc.okhttp.OkHttpChannelBuilder;
 import io.grpc.okhttp.OkHttpChannelProvider;
 import io.grpc.stub.StreamObserver;
+
 
 /**
  * Client that sends streaming audio to Speech.Recognize and returns streaming transcript.
@@ -72,10 +76,13 @@ public class StreamingRecognizeClient implements StreamObserver<StreamingRecogni
 
     private void initializeRecognition() throws InterruptedException, IOException {
         requestObserver = mSpeechClient.streamingRecognize(this);
+//        Spinner spinner = (Spinner)mActivity.findViewById(R.id.language_spinner);
+//        String languageCode = spinner.getSelectedItem().toString();
         RecognitionConfig config =
                 RecognitionConfig.newBuilder()
                         .setEncoding(AudioEncoding.LINEAR16)
                         .setSampleRate(mSamplingRate)
+//                        .setLanguageCode(languageCode)
                         .build();
         StreamingRecognitionConfig streamingConfig =
                 StreamingRecognitionConfig.newBuilder()
@@ -95,9 +102,7 @@ public class StreamingRecognizeClient implements StreamObserver<StreamingRecogni
         mActivity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                Log.i("-----------------","-------------------");
                 StreamingRecognizeResponse.EndpointerType endPointerType = response.getEndpointerType();
-
                 switch (endPointerType){
                     case START_OF_SPEECH:
                         textView = createNewTextView("");
@@ -117,14 +122,14 @@ public class StreamingRecognizeClient implements StreamObserver<StreamingRecogni
     }
 
     private TextView createNewTextView(String text) {
-        Log.i("createNewTextView",text);
         final LinearLayout.LayoutParams lparams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
-        final TextView textView = new TextView(mActivity);
-        textView.setLayoutParams(lparams);
-        textView.setText(text);
-        return textView;
+        final TextView txt = new TextView(mActivity);
+        txt.setLayoutParams(lparams);
+        txt.setText(text);
+        txt.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        return txt;
     }
 
     @Override
@@ -139,6 +144,7 @@ public class StreamingRecognizeClient implements StreamObserver<StreamingRecogni
     public void onCompleted() {
         Log.i(getClass().getSimpleName(), "recognize completed.");
     }
+
 
     public void recognizeBytes(byte[] audioBytes, int size) throws IOException,
             InterruptedException {

@@ -7,12 +7,15 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
 import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.google.android.gms.common.GooglePlayServicesUtil;
+import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.security.ProviderInstaller;
 
 import java.io.InputStream;
@@ -35,6 +38,12 @@ public class MainActivity extends AppCompatActivity {
     private StreamingRecognizeClient mStreamingClient;
     private int mBufferSize;
     private TextView txtOutput;
+    /**
+     * ATTENTION: This was auto-generated to implement the App Indexing API.
+     * See https://g.co/AppIndexing/AndroidStudio for more information.
+     */
+    private GoogleApiClient client;
+    private ManagedChannel channel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,10 +59,22 @@ public class MainActivity extends AppCompatActivity {
                 RECORDER_AUDIO_ENCODING,
                 mBufferSize);
 
+//        Spinner spinner = (Spinner) findViewById(R.id.language_spinner);
+//        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
+//                R.array.languages, android.R.layout.simple_spinner_item);
+//        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+//
+//        spinner.setAdapter(adapter);
+//
+//        spinner.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//            }
+//        });
+
         initialize();
 
 
-        txtOutput = (TextView) findViewById(R.id.txtOutput);
         mRecordingBt = (Button) findViewById(R.id.recording_bt);
         mRecordingBt.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -91,7 +112,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void readData() {
-        byte sData[] = new  byte[mBufferSize];
+        byte sData[] = new byte[mBufferSize];
         while (mIsRecording) {
             int bytesRead = mAudioRecord.read(sData, 0, mBufferSize);
             if (bytesRead > 0) {
@@ -132,7 +153,7 @@ public class MainActivity extends AppCompatActivity {
 
                 try {
                     InputStream credentials = getAssets().open("credentials.json");
-                    ManagedChannel channel = StreamingRecognizeClient.createChannel(
+                    channel = StreamingRecognizeClient.createChannel(
                             HOSTNAME, PORT, credentials);
                     mStreamingClient = new StreamingRecognizeClient(MainActivity.this, channel, RECORDER_SAMPLERATE);
                 } catch (Exception e) {

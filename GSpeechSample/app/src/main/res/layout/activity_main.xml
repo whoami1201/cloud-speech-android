@@ -9,24 +9,20 @@
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="me.yurifariasg.MainActivity">
-
-    <LinearLayout
-        android:id="@+id/linearLayout"
+    <ScrollView
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:isScrollContainer="true"
-        android:layout_marginLeft="30dp"
-        android:layout_marginTop="15dp"
-        android:orientation="vertical">
-    </LinearLayout>
+        android:layout_height="300dp">
+        <LinearLayout
+            android:id="@+id/linearLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:isScrollContainer="true"
+            android:layout_marginLeft="30dp"
+            android:layout_marginTop="15dp"
+            android:orientation="vertical">
+        </LinearLayout>
+    </ScrollView>
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/txtOutput"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="50dp"
-        />
 
     <Button
         android:id="@+id/recording_bt"
@@ -36,4 +32,10 @@
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="75dp" />
+
+    <Spinner
+        android:id="@+id/language_spinner"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content" />
+
 </RelativeLayout>
