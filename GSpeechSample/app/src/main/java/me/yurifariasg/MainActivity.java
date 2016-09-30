@@ -7,21 +7,20 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.Spinner;
-import android.widget.TextView;
 
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
 import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.google.android.gms.common.GooglePlayServicesUtil;
-import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.security.ProviderInstaller;
 
 import java.io.InputStream;
 
 import io.grpc.ManagedChannel;
-
 
 public class MainActivity extends AppCompatActivity {
 
@@ -37,13 +36,8 @@ public class MainActivity extends AppCompatActivity {
     private Button mRecordingBt;
     private StreamingRecognizeClient mStreamingClient;
     private int mBufferSize;
-    private TextView txtOutput;
-    /**
-     * ATTENTION: This was auto-generated to implement the App Indexing API.
-     * See https://g.co/AppIndexing/AndroidStudio for more information.
-     */
-    private GoogleApiClient client;
     private ManagedChannel channel;
+    private LinearLayout linearLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,22 +53,33 @@ public class MainActivity extends AppCompatActivity {
                 RECORDER_AUDIO_ENCODING,
                 mBufferSize);
 
-//        Spinner spinner = (Spinner) findViewById(R.id.language_spinner);
-//        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
-//                R.array.languages, android.R.layout.simple_spinner_item);
-//        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-//
-//        spinner.setAdapter(adapter);
-//
-//        spinner.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//            }
-//        });
-
         initialize();
 
+        Spinner spinner = (Spinner) findViewById(R.id.language_spinner);
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
+                R.array.languages, android.R.layout.simple_spinner_item);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 
+        spinner.setAdapter(adapter);
+
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (mIsRecording) {
+                    stopRecording();
+                }
+                clearTexts();
+                initialize();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                Log.i(this.getClass().getSimpleName(),"Spinner not selected");
+            }
+        });
+
+
+        linearLayout = (LinearLayout) findViewById(R.id.linearLayout);
         mRecordingBt = (Button) findViewById(R.id.recording_bt);
         mRecordingBt.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -93,10 +98,18 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void clearTexts() {
+        if (linearLayout.getChildCount() > 0) {
+            linearLayout.removeAllViews();
+        }
+    }
+
     private void stopRecording() {
         mIsRecording = false;
         mAudioRecord.stop();
-        mStreamingClient.finish();
+        if (mStreamingClient != null) {
+            mStreamingClient.finish();
+        }
         mRecordingBt.setText(R.string.start_recording);
     }
 

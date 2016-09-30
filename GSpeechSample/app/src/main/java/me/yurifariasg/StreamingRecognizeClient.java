@@ -76,13 +76,13 @@ public class StreamingRecognizeClient implements StreamObserver<StreamingRecogni
 
     private void initializeRecognition() throws InterruptedException, IOException {
         requestObserver = mSpeechClient.streamingRecognize(this);
-//        Spinner spinner = (Spinner)mActivity.findViewById(R.id.language_spinner);
-//        String languageCode = spinner.getSelectedItem().toString();
+        Spinner spinner = (Spinner)mActivity.findViewById(R.id.language_spinner);
+        String languageCode = spinner.getSelectedItem().toString();
         RecognitionConfig config =
                 RecognitionConfig.newBuilder()
                         .setEncoding(AudioEncoding.LINEAR16)
                         .setSampleRate(mSamplingRate)
-//                        .setLanguageCode(languageCode)
+                        .setLanguageCode(languageCode)
                         .build();
         StreamingRecognitionConfig streamingConfig =
                 StreamingRecognitionConfig.newBuilder()
@@ -167,7 +167,9 @@ public class StreamingRecognizeClient implements StreamObserver<StreamingRecogni
 
     public void finish() {
         Log.i(StreamingRecognizeClient.this.getClass().getSimpleName(), "onComplete.");
-        requestObserver.onCompleted();
+        if (requestObserver!=null) {
+            requestObserver.onCompleted();
+        }
         mIsInitialized = false;
     }
 
