@@ -2,6 +2,9 @@
     <string name="app_name">GSpeechSample</string>
     <string name="start_recording">Start Recording</string>
     <string name="stop_recording">Stop Recording</string>
+    <string name="clear_text">Clear Texts</string>
+    <string name="start_playing">Play Record</string>
+    <string name="stop_playing">Stop Playing</string>
     <string-array name="languages">
         <item>en</item>
         <item>fi</item>

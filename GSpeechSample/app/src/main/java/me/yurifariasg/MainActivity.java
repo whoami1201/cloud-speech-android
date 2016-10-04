@@ -1,9 +1,12 @@
 package me.yurifariasg;
 
 import android.media.AudioFormat;
+import android.media.AudioManager;
 import android.media.AudioRecord;
+import android.media.AudioTrack;
 import android.media.MediaRecorder;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -18,6 +21,10 @@ import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.security.ProviderInstaller;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 
 import io.grpc.ManagedChannel;
@@ -29,6 +36,8 @@ public class MainActivity extends AppCompatActivity {
     private static final int RECORDER_SAMPLERATE = 16000;
     private static final int RECORDER_CHANNELS = AudioFormat.CHANNEL_IN_MONO;
     private static final int RECORDER_AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT;
+    private static final String LOG_TAG = "TAG";
+    private String mFileName;
 
     private AudioRecord mAudioRecord = null;
     private Thread mRecordingThread = null;
@@ -38,6 +47,14 @@ public class MainActivity extends AppCompatActivity {
     private int mBufferSize;
     private ManagedChannel channel;
     private LinearLayout linearLayout;
+    private FileOutputStream outputStream;
+    private Button mPlayRecordingBt;
+    private boolean mIsPlaying = false;
+
+    public MainActivity() {
+        mFileName = Environment.getExternalStorageDirectory().getAbsolutePath();
+        mFileName += "/test.amr";
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,7 +78,6 @@ public class MainActivity extends AppCompatActivity {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 
         spinner.setAdapter(adapter);
-
         spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -96,6 +112,31 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+
+        mPlayRecordingBt = (Button) findViewById(R.id.play_bt);
+        mPlayRecordingBt.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View v) {
+                if (mIsPlaying) {
+                    stopPlayingRecord();
+                } else {
+                    startPlayingRecord();
+                }
+                mIsPlaying = !mIsPlaying;
+            }
+        });
+
+        Button mClearTextBt = (Button) findViewById(R.id.clear_text_bt);
+        mClearTextBt.setOnClickListener(new View.OnClickListener(){
+
+            @Override
+            public void onClick(View v) {
+                if (mIsRecording) {
+                    stopRecording();
+                }
+                clearTexts();
+            }
+        });
     }
 
     private void clearTexts() {
@@ -114,14 +155,59 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startRecording() {
+        try {
+            outputStream = new FileOutputStream(mFileName);
+        } catch(FileNotFoundException e) {
+            e.printStackTrace();
+        }
         mAudioRecord.startRecording();
         mIsRecording = true;
         mRecordingThread = new Thread(new Runnable() {
             public void run() {
                 readData();
+                try {
+                    outputStream.close();
+                } catch (IOException io) {
+                    io.printStackTrace();
+                }
             }
         }, "AudioRecorder Thread");
         mRecordingThread.start();
+
+    }
+
+    private void startPlayingRecord(){
+
+        byte[] audioData = null;
+
+        try {
+            InputStream inputStream = new FileInputStream(mFileName);
+
+            audioData = new byte[mBufferSize];
+
+            AudioTrack audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC,
+                    RECORDER_SAMPLERATE,
+                    AudioFormat.CHANNEL_OUT_MONO,
+                    RECORDER_AUDIO_ENCODING,
+                    mBufferSize,
+                    AudioTrack.MODE_STREAM);
+
+            audioTrack.play();
+            int i;
+
+            while ((i = inputStream.read(audioData)) != -1 ) {
+                audioTrack.write(audioData,0,i);
+            }
+
+        } catch(FileNotFoundException fe) {
+            Log.e(LOG_TAG,"File not found");
+        } catch(IOException io) {
+            Log.e(LOG_TAG,"IO Exception");
+        }
+    }
+
+    private void stopPlayingRecord(){
+        Log.i("Clicked:","STOP");
     }
 
     private void readData() {
@@ -130,6 +216,9 @@ public class MainActivity extends AppCompatActivity {
             int bytesRead = mAudioRecord.read(sData, 0, mBufferSize);
             if (bytesRead > 0) {
                 try {
+                    if (outputStream != null) {
+                        outputStream.write(sData);
+                    }
                     mStreamingClient.recognizeBytes(sData, bytesRead);
                 } catch (Exception e) {
                     e.printStackTrace();
