@@ -1,9 +1,8 @@
 package me.yurifariasg;
 
 import android.media.AudioFormat;
-import android.media.AudioManager;
 import android.media.AudioRecord;
-import android.media.AudioTrack;
+import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.os.Environment;
@@ -21,11 +20,16 @@ import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.security.ProviderInstaller;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 import io.grpc.ManagedChannel;
 
@@ -37,7 +41,8 @@ public class MainActivity extends AppCompatActivity {
     private static final int RECORDER_CHANNELS = AudioFormat.CHANNEL_IN_MONO;
     private static final int RECORDER_AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT;
     private static final String LOG_TAG = "TAG";
-    private String mFileName;
+    private String mWavFileName;
+    private String mRawFileName;
 
     private AudioRecord mAudioRecord = null;
     private Thread mRecordingThread = null;
@@ -50,10 +55,12 @@ public class MainActivity extends AppCompatActivity {
     private FileOutputStream outputStream;
     private Button mPlayRecordingBt;
     private boolean mIsPlaying = false;
+    private MediaPlayer mPlayer;
 
     public MainActivity() {
-        mFileName = Environment.getExternalStorageDirectory().getAbsolutePath();
-        mFileName += "/test.amr";
+        mRawFileName = Environment.getExternalStorageDirectory().getAbsolutePath();
+        mWavFileName = mRawFileName + "/test-new.wav";
+        mRawFileName += "/test.amr";
     }
 
     @Override
@@ -100,6 +107,9 @@ public class MainActivity extends AppCompatActivity {
         mRecordingBt.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                if (mIsPlaying) {
+                    stopPlayingRecord();
+                }
                 if (mIsRecording) {
                     stopRecording();
                 } else {
@@ -117,6 +127,9 @@ public class MainActivity extends AppCompatActivity {
         mPlayRecordingBt.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v) {
+                if (mIsRecording) {
+                    stopRecording();
+                }
                 if (mIsPlaying) {
                     stopPlayingRecord();
                 } else {
@@ -135,6 +148,7 @@ public class MainActivity extends AppCompatActivity {
                     stopRecording();
                 }
                 clearTexts();
+
             }
         });
     }
@@ -151,12 +165,17 @@ public class MainActivity extends AppCompatActivity {
         if (mStreamingClient != null) {
             mStreamingClient.finish();
         }
+        try {
+            rawToWave(new File(mRawFileName), new File(mWavFileName));
+        } catch (IOException io){
+            io.printStackTrace();
+        }
         mRecordingBt.setText(R.string.start_recording);
     }
 
     private void startRecording() {
         try {
-            outputStream = new FileOutputStream(mFileName);
+            outputStream = new FileOutputStream(mRawFileName);
         } catch(FileNotFoundException e) {
             e.printStackTrace();
         }
@@ -173,41 +192,25 @@ public class MainActivity extends AppCompatActivity {
             }
         }, "AudioRecorder Thread");
         mRecordingThread.start();
-
     }
 
     private void startPlayingRecord(){
+        mPlayRecordingBt.setText(R.string.stop_playing);
 
-        byte[] audioData = null;
-
+        mPlayer = new MediaPlayer();
         try {
-            InputStream inputStream = new FileInputStream(mFileName);
-
-            audioData = new byte[mBufferSize];
-
-            AudioTrack audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC,
-                    RECORDER_SAMPLERATE,
-                    AudioFormat.CHANNEL_OUT_MONO,
-                    RECORDER_AUDIO_ENCODING,
-                    mBufferSize,
-                    AudioTrack.MODE_STREAM);
-
-            audioTrack.play();
-            int i;
-
-            while ((i = inputStream.read(audioData)) != -1 ) {
-                audioTrack.write(audioData,0,i);
-            }
-
-        } catch(FileNotFoundException fe) {
-            Log.e(LOG_TAG,"File not found");
-        } catch(IOException io) {
-            Log.e(LOG_TAG,"IO Exception");
+            mPlayer.setDataSource(mWavFileName);
+            mPlayer.prepare();
+            mPlayer.start();
+        } catch (IOException e) {
+            Log.e(LOG_TAG, "prepare() failed");
         }
     }
 
     private void stopPlayingRecord(){
-        Log.i("Clicked:","STOP");
+        mPlayer.release();
+        mPlayer = null;
+        mPlayRecordingBt.setText(R.string.start_playing);
     }
 
     private void readData() {
@@ -274,6 +277,94 @@ public class MainActivity extends AppCompatActivity {
             } catch (InterruptedException e) {
                 Log.e(MainActivity.class.getSimpleName(), "Error", e);
             }
+        }
+    }
+
+    private void rawToWave(final File rawFile, final File waveFile) throws IOException {
+
+        byte[] rawData = new byte[(int) rawFile.length()];
+        DataInputStream input = null;
+        try {
+            input = new DataInputStream(new FileInputStream(rawFile));
+            input.read(rawData);
+        } finally {
+            if (input != null) {
+                input.close();
+            }
+        }
+
+        DataOutputStream output = null;
+        try {
+            output = new DataOutputStream(new FileOutputStream(waveFile));
+            // WAVE header
+            // see http://ccrma.stanford.edu/courses/422/projects/WaveFormat/
+            writeString(output, "RIFF"); // chunk id
+            writeInt(output, 36 + rawData.length); // chunk size
+            writeString(output, "WAVE"); // format
+            writeString(output, "fmt "); // subchunk 1 id
+            writeInt(output, 16); // subchunk 1 size
+            writeShort(output, (short) 1); // audio format (1 = PCM)
+            writeShort(output, (short) 1); // number of channels
+            writeInt(output, RECORDER_SAMPLERATE); // sample rate
+            writeInt(output, RECORDER_SAMPLERATE * 2); // byte rate
+            writeShort(output, (short) 2); // block align
+            writeShort(output, (short) 16); // bits per sample
+            writeString(output, "data"); // subchunk 2 id
+            writeInt(output, rawData.length); // subchunk 2 size
+            // Audio data (conversion big endian -> little endian)
+            short[] shorts = new short[rawData.length / 2];
+            ByteBuffer.wrap(rawData).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shorts);
+            ByteBuffer bytes = ByteBuffer.allocate(shorts.length * 2);
+            for (short s : shorts) {
+                bytes.putShort(s);
+            }
+
+            output.write(fullyReadFileToBytes(rawFile));
+        } finally {
+            if (output != null) {
+                output.close();
+            }
+        }
+    }
+    byte[] fullyReadFileToBytes(File f) throws IOException {
+        int size = (int) f.length();
+        byte bytes[] = new byte[size];
+        byte tmpBuff[] = new byte[size];
+        FileInputStream fis= new FileInputStream(f);
+        try {
+
+            int read = fis.read(bytes, 0, size);
+            if (read < size) {
+                int remain = size - read;
+                while (remain > 0) {
+                    read = fis.read(tmpBuff, 0, remain);
+                    System.arraycopy(tmpBuff, 0, bytes, size - remain, read);
+                    remain -= read;
+                }
+            }
+        }  catch (IOException e){
+            throw e;
+        } finally {
+            fis.close();
+        }
+
+        return bytes;
+    }
+    private void writeInt(final DataOutputStream output, final int value) throws IOException {
+        output.write(value >> 0);
+        output.write(value >> 8);
+        output.write(value >> 16);
+        output.write(value >> 24);
+    }
+
+    private void writeShort(final DataOutputStream output, final short value) throws IOException {
+        output.write(value >> 0);
+        output.write(value >> 8);
+    }
+
+    private void writeString(final DataOutputStream output, final String value) throws IOException {
+        for (int i = 0; i < value.length(); i++) {
+            output.write(value.charAt(i));
         }
     }
 

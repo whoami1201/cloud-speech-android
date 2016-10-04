@@ -53,11 +53,11 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/play_bt"
-        android:layout_marginRight="7dp"
-        android:layout_marginEnd="7dp"
         android:layout_below="@+id/recording_bt"
         android:layout_alignRight="@+id/recording_bt"
-        android:layout_alignEnd="@+id/recording_bt" />
+        android:layout_alignEnd="@+id/recording_bt"
+        android:layout_alignLeft="@+id/recording_bt"
+        android:layout_alignStart="@+id/recording_bt" />
 
     <Button
         android:layout_width="wrap_content"
