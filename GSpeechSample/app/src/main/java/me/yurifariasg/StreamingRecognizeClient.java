@@ -1,11 +1,6 @@
 package me.yurifariasg;
 
-import android.app.Activity;
 import android.util.Log;
-import android.util.TypedValue;
-import android.widget.LinearLayout;
-import android.widget.Spinner;
-import android.widget.TextView;
 
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.speech.v1beta1.RecognitionConfig;
@@ -16,7 +11,6 @@ import com.google.cloud.speech.v1beta1.StreamingRecognizeRequest;
 import com.google.cloud.speech.v1beta1.StreamingRecognizeResponse;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.TextFormat;
-import com.google.type.Color;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -43,8 +37,7 @@ public class StreamingRecognizeClient implements StreamObserver<StreamingRecogni
     private final ManagedChannel mChannel;
 
     private final SpeechGrpc.SpeechStub mSpeechClient;
-    private final Activity mActivity;
-    private final LinearLayout linearLayout;
+    private final StreamingRecognizeClientListener listener;
 
     private StreamingRecognizeResponse lastResponse;
 
@@ -52,18 +45,16 @@ public class StreamingRecognizeClient implements StreamObserver<StreamingRecogni
 
     private static final List<String> OAUTH2_SCOPES =
             Arrays.asList("https://www.googleapis.com/auth/cloud-platform");
-    private TextView textOutput;
 
 
     /**
      * Construct client connecting to Cloud Speech server at {@code host:port}.
      */
-    public StreamingRecognizeClient(Activity activity, ManagedChannel channel, int samplingRate)
+    public StreamingRecognizeClient(ManagedChannel channel, int samplingRate, StreamingRecognizeClientListener listener)
             throws IOException {
         this.mSamplingRate = samplingRate;
         this.mChannel = channel;
-        this.mActivity = activity;
-        this.linearLayout = (LinearLayout) mActivity.findViewById(R.id.linearLayout);
+        this.listener = listener;
         this.lastResponse = null;
 
         mSpeechClient = SpeechGrpc.newStub(channel);
@@ -78,8 +69,12 @@ public class StreamingRecognizeClient implements StreamObserver<StreamingRecogni
 
     private void initializeRecognition() throws InterruptedException, IOException {
         requestObserver = mSpeechClient.streamingRecognize(this);
-        Spinner spinner = (Spinner)mActivity.findViewById(R.id.language_spinner);
-        String languageCode = spinner.getSelectedItem().toString();
+        String languageCode = "en";
+
+        if (listener!=null) {
+            languageCode = listener.onUISpinnerRefresh();
+        }
+
         RecognitionConfig config =
                 RecognitionConfig.newBuilder()
                         .setEncoding(AudioEncoding.LINEAR16)
@@ -101,50 +96,13 @@ public class StreamingRecognizeClient implements StreamObserver<StreamingRecogni
     @Override
     public void onNext(final StreamingRecognizeResponse response) {
         Log.i(getClass().getSimpleName(), "Received response: " + TextFormat.printToString(response));
-        mActivity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                StreamingRecognizeResponse.EndpointerType endPointerType = response.getEndpointerType();
-                switch (endPointerType){
-                    case START_OF_SPEECH:
-                        if (lastResponse!= null
-                                && lastResponse.getEndpointerType() != StreamingRecognizeResponse.EndpointerType.START_OF_SPEECH) {
-                            if (lastResponse.getResultsCount() > 0) {
-                                // If the previous response final
-                                if (lastResponse.getResults(0).getIsFinal()) {
-                                    textOutput = createNewTextView("");
-                                    linearLayout.addView(textOutput);
-                                }
-                            }
-                        } else {
-                            textOutput = createNewTextView("");
-                            linearLayout.addView(textOutput);
-                        }
-                        break;
-                    case ENDPOINTER_EVENT_UNSPECIFIED:
-                        if (response.getResultsCount() > 0){
-                            if (response.getResults(0).getAlternativesCount() > 0) {
-                                textOutput.setText(response.getResults(0).getAlternatives(0).getTranscript());
-                            }
-                        }
-                        break;
-                }
-            }
-        });
+        if(listener!=null) {
+            listener.onUIResponseRefresh(response, lastResponse);
+        }
         lastResponse = response;
     }
 
-    private TextView createNewTextView(String text) {
-        final LinearLayout.LayoutParams lparams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT);
-        final TextView txt = new TextView(mActivity);
-        txt.setLayoutParams(lparams);
-        txt.setText(text);
-        txt.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
-        txt.setTextColor(mActivity.getResources().getColor(R.color.colorPrimaryBlack));
-        return txt;
-    }
+
 
     @Override
     public void onError(Throwable error) {
@@ -203,5 +161,9 @@ public class StreamingRecognizeClient implements StreamObserver<StreamingRecogni
         return channel;
     }
 
+ public interface StreamingRecognizeClientListener {
+     void onUIResponseRefresh(StreamingRecognizeResponse response, StreamingRecognizeResponse lastResponse);
+     String onUISpinnerRefresh();
+ }
 
 }

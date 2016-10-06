@@ -8,17 +8,20 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
+import android.widget.TextView;
 
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
 import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.security.ProviderInstaller;
+import com.google.cloud.speech.v1beta1.StreamingRecognizeResponse;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -28,12 +31,13 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringBufferInputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 import io.grpc.ManagedChannel;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements StreamingRecognizeClient.StreamingRecognizeClientListener {
 
     private static final String HOSTNAME = "speech.googleapis.com";
     private static final int PORT = 443;
@@ -56,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
     private Button mPlayRecordingBt;
     private boolean mIsPlaying = false;
     private MediaPlayer mPlayer;
+    private TextView textOutput;
 
     public MainActivity() {
         mRawFileName = Environment.getExternalStorageDirectory().getAbsolutePath();
@@ -260,7 +265,7 @@ public class MainActivity extends AppCompatActivity {
                     InputStream credentials = getAssets().open("credentials.json");
                     channel = StreamingRecognizeClient.createChannel(
                             HOSTNAME, PORT, credentials);
-                    mStreamingClient = new StreamingRecognizeClient(MainActivity.this, channel, RECORDER_SAMPLERATE);
+                    mStreamingClient = new StreamingRecognizeClient(channel, RECORDER_SAMPLERATE, MainActivity.this);
                 } catch (Exception e) {
                     Log.e(MainActivity.class.getSimpleName(), "Error", e);
                 }
@@ -368,4 +373,55 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    public void onUIResponseRefresh(final StreamingRecognizeResponse response, final StreamingRecognizeResponse lastResponse) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                StreamingRecognizeResponse.EndpointerType endPointerType = response.getEndpointerType();
+                switch (endPointerType){
+                    case START_OF_SPEECH:
+                        if (lastResponse!= null
+                                && lastResponse.getEndpointerType() != StreamingRecognizeResponse.EndpointerType.START_OF_SPEECH) {
+                            if (lastResponse.getResultsCount() > 0) {
+                                // If the previous response final
+                                if (lastResponse.getResults(0).getIsFinal()) {
+                                    textOutput = createNewTextView("");
+                                    linearLayout.addView(textOutput);
+                                }
+                            }
+                        } else {
+                            textOutput = createNewTextView("");
+                            linearLayout.addView(textOutput);
+                        }
+                        break;
+                    case ENDPOINTER_EVENT_UNSPECIFIED:
+                        if (response.getResultsCount() > 0){
+                            if (response.getResults(0).getAlternativesCount() > 0) {
+                                textOutput.setText(response.getResults(0).getAlternatives(0).getTranscript());
+                            }
+                        }
+                        break;
+                }
+            }
+        });
+    }
+
+    @Override
+    public String onUISpinnerRefresh() {
+        Spinner spinner = (Spinner) findViewById(R.id.language_spinner);
+        return spinner.getSelectedItem().toString();
+    }
+
+    private TextView createNewTextView(String text) {
+        final LinearLayout.LayoutParams lparams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        final TextView txt = new TextView(this);
+        txt.setLayoutParams(lparams);
+        txt.setText(text);
+        txt.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        txt.setTextColor(getResources().getColor(R.color.colorPrimaryBlack));
+        return txt;
+    }
 }
