@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">GSpeechSample</string>
+    <string name="app_name">Speech API Demo</string>
     <string name="start_recording">Start Recording</string>
     <string name="stop_recording">Stop Recording</string>
     <string name="clear_text">Clear Texts</string>

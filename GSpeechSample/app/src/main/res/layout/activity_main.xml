@@ -10,8 +10,9 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="me.yurifariasg.MainActivity">
     <ScrollView
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="300dp"
+        android:background="@color/colorTransparent"
         android:id="@+id/scrollView3">
         <LinearLayout
             android:id="@+id/linearLayout"

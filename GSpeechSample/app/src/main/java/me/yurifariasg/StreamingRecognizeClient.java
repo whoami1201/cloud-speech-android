@@ -11,12 +11,12 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.speech.v1beta1.RecognitionConfig;
 import com.google.cloud.speech.v1beta1.RecognitionConfig.AudioEncoding;
 import com.google.cloud.speech.v1beta1.SpeechGrpc;
-import com.google.cloud.speech.v1beta1.SpeechRecognitionAlternative;
 import com.google.cloud.speech.v1beta1.StreamingRecognitionConfig;
 import com.google.cloud.speech.v1beta1.StreamingRecognizeRequest;
 import com.google.cloud.speech.v1beta1.StreamingRecognizeResponse;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.TextFormat;
+import com.google.type.Color;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -64,7 +64,7 @@ public class StreamingRecognizeClient implements StreamObserver<StreamingRecogni
         this.mChannel = channel;
         this.mActivity = activity;
         this.linearLayout = (LinearLayout) mActivity.findViewById(R.id.linearLayout);
-
+        this.lastResponse = null;
 
         mSpeechClient = SpeechGrpc.newStub(channel);
     }
@@ -100,11 +100,7 @@ public class StreamingRecognizeClient implements StreamObserver<StreamingRecogni
 
     @Override
     public void onNext(final StreamingRecognizeResponse response) {
-        Log.i(getClass().getSimpleName(),"---------------");
         Log.i(getClass().getSimpleName(), "Received response: " + TextFormat.printToString(response));
-        if (lastResponse!=null){
-            Log.i(getClass().getSimpleName(), "LAST response: " + TextFormat.printToString(lastResponse));
-        }
         mActivity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -118,7 +114,6 @@ public class StreamingRecognizeClient implements StreamObserver<StreamingRecogni
                                 if (lastResponse.getResults(0).getIsFinal()) {
                                     textOutput = createNewTextView("");
                                     linearLayout.addView(textOutput);
-                                    break;
                                 }
                             }
                         } else {
@@ -147,6 +142,7 @@ public class StreamingRecognizeClient implements StreamObserver<StreamingRecogni
         txt.setLayoutParams(lparams);
         txt.setText(text);
         txt.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        txt.setTextColor(mActivity.getResources().getColor(R.color.colorPrimaryBlack));
         return txt;
     }
 
@@ -184,6 +180,7 @@ public class StreamingRecognizeClient implements StreamObserver<StreamingRecogni
     }
 
     public void finish() {
+        lastResponse = null;
         Log.i(StreamingRecognizeClient.this.getClass().getSimpleName(), "onComplete.");
         if (requestObserver!=null) {
             requestObserver.onCompleted();
