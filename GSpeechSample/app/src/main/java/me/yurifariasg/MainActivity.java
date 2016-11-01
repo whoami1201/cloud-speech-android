@@ -1,5 +1,6 @@
 package me.yurifariasg;
 
+import android.app.Activity;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaPlayer;
@@ -16,24 +17,23 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import com.github.nkzawa.emitter.Emitter;
+import com.github.nkzawa.socketio.client.IO;
+import com.github.nkzawa.socketio.client.Socket;
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
 import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.security.ProviderInstaller;
 import com.google.cloud.speech.v1beta1.StreamingRecognizeResponse;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringBufferInputStream;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
+import java.net.URISyntaxException;
 
 import io.grpc.ManagedChannel;
 import me.yurifariasg.utils.AudioUtils;
@@ -45,7 +45,7 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
     private static final int RECORDER_SAMPLERATE = 16000;
     private static final int RECORDER_CHANNELS = AudioFormat.CHANNEL_IN_MONO;
     private static final int RECORDER_AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT;
-    private static final String LOG_TAG = "TAG";
+    private static final String LOG_TAG = "Appla Debug";
     private String mWavFileName;
     private String mRawFileName;
 
@@ -69,6 +69,15 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
         mRawFileName += "/test.amr";
     }
 
+    private Socket mSocket;
+    {
+        try {
+            mSocket = IO.socket("http://appla.herokuapp.com");
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -84,6 +93,11 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
                 mBufferSize);
 
         initialize();
+        mSocket.on(Socket.EVENT_CONNECT, onConnect);
+        mSocket.on(Socket.EVENT_CONNECT_ERROR, onConnectError);
+        mSocket.on("chat message", onNewMessage);
+
+        mSocket.connect();
 
         Spinner spinner = (Spinner) findViewById(R.id.language_spinner);
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
@@ -158,6 +172,8 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
             }
         });
     }
+
+
 
     private void clearTexts() {
         if (linearLayout.getChildCount() > 0) {
@@ -284,6 +300,11 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
                 Log.e(MainActivity.class.getSimpleName(), "Error", e);
             }
         }
+        mSocket.disconnect();
+        mSocket.off(Socket.EVENT_CONNECT, onConnect);
+        mSocket.off(Socket.EVENT_CONNECT_ERROR, onConnectError);
+        mSocket.off("chat message", onNewMessage);
+
     }
 
 
@@ -313,7 +334,11 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
                     case ENDPOINTER_EVENT_UNSPECIFIED:
                         if (response.getResultsCount() > 0){
                             if (response.getResults(0).getAlternativesCount() > 0) {
-                                textOutput.setText(response.getResults(0).getAlternatives(0).getTranscript());
+                                String script = response.getResults(0).getAlternatives(0).getTranscript();
+                                textOutput.setText(script);
+
+                                if (response.getResults(0).getIsFinal())
+                                    mSocket.emit("chat message", script);
                             }
                         }
                         break;
@@ -339,4 +364,53 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
         txt.setTextColor(getResources().getColor(R.color.colorPrimaryBlack));
         return txt;
     }
+
+    private Emitter.Listener onNewMessage = new Emitter.Listener() {
+
+        @Override
+        public void call(final Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+//                    JSONObject data = (JSONObject) args[0];
+//                    String message;
+//                    try {
+//                        message = data.getString("message");
+//                    } catch (JSONException e) {
+//                        e.printStackTrace();
+//                        return;
+//                    }
+                }
+            });
+        }
+    };
+
+    private boolean isConnected = false;
+
+    private Emitter.Listener onConnect = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (!isConnected) {
+                        Toast.makeText(getApplicationContext(), "Connected!", Toast.LENGTH_LONG).show();
+                        isConnected = true;
+                    }
+                }
+            });
+        }
+    };
+
+    private Emitter.Listener onConnectError = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(getApplicationContext(),"Connect Error!", Toast.LENGTH_LONG).show();
+                }
+            });
+        }
+    };
 }

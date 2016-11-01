@@ -9,21 +9,6 @@
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="me.yurifariasg.MainActivity">
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="300dp"
-        android:background="@color/colorTransparent"
-        android:id="@+id/scrollView3">
-        <LinearLayout
-            android:id="@+id/linearLayout"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:isScrollContainer="true"
-            android:layout_marginLeft="30dp"
-            android:layout_marginTop="15dp"
-            android:orientation="vertical">
-        </LinearLayout>
-    </ScrollView>
 
 
     <Button
@@ -68,5 +53,25 @@
         android:layout_below="@+id/language_spinner"
         android:layout_alignRight="@+id/language_spinner"
         android:layout_alignEnd="@+id/language_spinner" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:background="@color/colorTransparent"
+        android:id="@+id/scrollView3"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_marginTop="27dp">
+        <LinearLayout
+            android:id="@+id/linearLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:isScrollContainer="true"
+            android:layout_marginLeft="30dp"
+            android:layout_marginTop="15dp"
+            android:orientation="vertical">
+        </LinearLayout>
+    </ScrollView>
 
 </RelativeLayout>
