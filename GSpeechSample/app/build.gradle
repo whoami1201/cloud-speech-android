@@ -62,13 +62,13 @@ def grpcVersion = '0.15.0'
 dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
     testCompile 'junit:junit:4.12'
-//    compile 'com.android.support:recyclerview-v7:+'
     compile 'com.android.support:appcompat-v7:24.2.1'
     compile 'javax.annotation:javax.annotation-api:1.2'
     compile "io.grpc:grpc-okhttp:${grpcVersion}"
     compile "io.grpc:grpc-protobuf:${grpcVersion}"
     compile "io.grpc:grpc-stub:${grpcVersion}"
     compile "io.grpc:grpc-auth:${grpcVersion}"
+    compile 'com.android.support:recyclerview-v7:24.0.+'
     compile 'com.google.auth:google-auth-library-oauth2-http:0.3.0'
     compile 'com.android.support:multidex:1.0.1'
     compile 'com.google.android.gms:play-services-base:9.6.1'

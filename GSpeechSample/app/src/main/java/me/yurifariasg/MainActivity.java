@@ -1,6 +1,7 @@
 package me.yurifariasg;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaPlayer;
@@ -8,6 +9,7 @@ import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
@@ -20,7 +22,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.github.nkzawa.emitter.Emitter;
-import com.github.nkzawa.socketio.client.IO;
 import com.github.nkzawa.socketio.client.Socket;
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
 import com.google.android.gms.common.GooglePlayServicesRepairableException;
@@ -33,7 +34,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
+import java.util.List;
 
 import io.grpc.ManagedChannel;
 import me.yurifariasg.utils.AudioUtils;
@@ -46,6 +47,7 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
     private static final int RECORDER_CHANNELS = AudioFormat.CHANNEL_IN_MONO;
     private static final int RECORDER_AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT;
     private static final String LOG_TAG = "Appla Debug";
+    private static final int REQUEST_LOGIN = 0;
     private String mWavFileName;
     private String mRawFileName;
 
@@ -63,22 +65,17 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
     private MediaPlayer mPlayer;
     private TextView textOutput;
     private long mLastT;
+    private Socket mSocket;
+    private String mUsername;
+    private List<Message> mMessages;
+    private RecyclerView.Adapter mAdapter;
 
     public MainActivity() {
         mRawFileName = Environment.getExternalStorageDirectory().getAbsolutePath();
         mWavFileName = mRawFileName + "/test-new.wav";
         mRawFileName += "/test.amr";
     }
-
-    private Socket mSocket;
-    {
-        try {
-            mSocket = IO.socket("http://discourse.metropolia.fi");
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
-    }
-
+    
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -93,12 +90,17 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
                 RECORDER_AUDIO_ENCODING,
                 mBufferSize);
 
+        mAdapter = new MessageAdapter(this, mMessages);
         initialize();
+        AppLa app = (AppLa) getApplication();
+        mSocket = app.getSocket();
         mSocket.on(Socket.EVENT_CONNECT, onConnect);
         mSocket.on(Socket.EVENT_CONNECT_ERROR, onConnectError);
         mSocket.on("chat message", onNewMessage);
 
         mSocket.connect();
+
+        startSignIn();
 
         Spinner spinner = (Spinner) findViewById(R.id.language_spinner);
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
@@ -174,12 +176,30 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
         });
     }
 
+    private void startSignIn() {
+        mUsername = null;
+        Intent intent = new Intent(this, LoginActivity.class);
+        startActivityForResult(intent, REQUEST_LOGIN);
+    }
 
 
     private void clearTexts() {
         if (linearLayout.getChildCount() > 0) {
             linearLayout.removeAllViews();
         }
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (Activity.RESULT_OK != resultCode) {
+            this.finish();
+            return;
+        }
+
+        mUsername = data.getStringExtra("username");
+        int numUsers = data.getIntExtra("numUsers", 1);
+
     }
 
     private void stopRecording() {
