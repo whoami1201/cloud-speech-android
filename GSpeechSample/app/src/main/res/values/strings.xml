@@ -1,10 +1,20 @@
 <resources>
-    <string name="app_name">Speech API Demo</string>
+    <string name="app_name">AppLa Demo</string>
     <string name="start_recording">Start Recording</string>
     <string name="stop_recording">Stop Recording</string>
     <string name="clear_text">Clear Texts</string>
     <string name="start_playing">Play Record</string>
     <string name="stop_playing">Stop Playing</string>
+    <string name="disable_detect_call">Disable Detect Call</string>
+    <string name="enable_detect_call">Enable detect call</string>
+    <string name="connection_status">Connection status</string>
+    <string name="prompt_username">Input your username</string>
+    <string name="action_sign_in_short">Sign In</string>
+    <string name="action_sign_in">Sign In</string>
+    <string name="error_field_required">Field Required!</string>
+    <string name="prompt_message">message</string>
+    <string name="action_send">send</string>
+    <string name="title_activity_login">Login</string>
     <string-array name="languages">
         <item>en</item>
         <item>fi</item>
