@@ -62,6 +62,7 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
     private boolean mIsPlaying = false;
     private MediaPlayer mPlayer;
     private TextView textOutput;
+    private long mLastT;
 
     public MainActivity() {
         mRawFileName = Environment.getExternalStorageDirectory().getAbsolutePath();
@@ -72,7 +73,7 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
     private Socket mSocket;
     {
         try {
-            mSocket = IO.socket("http://appla.herokuapp.com");
+            mSocket = IO.socket("http://discourse.metropolia.fi");
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }
@@ -196,6 +197,7 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
     }
 
     private void startRecording() {
+        mLastT = System.currentTimeMillis();
         try {
             outputStream = new FileOutputStream(mRawFileName);
         } catch(FileNotFoundException e) {
@@ -243,6 +245,10 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
                 try {
                     if (outputStream != null) {
                         outputStream.write(sData);
+                    }
+                    if (System.currentTimeMillis() - mLastT > 55000) {
+                        mStreamingClient.finish();
+                        mLastT = System.currentTimeMillis();
                     }
                     mStreamingClient.recognizeBytes(sData, bytesRead);
                 } catch (Exception e) {
