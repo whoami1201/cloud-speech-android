@@ -1,4 +1,4 @@
-package me.yurifariasg;
+package me.baonguyen;
 
 /**
  * Created by bao on 01/11/2016.
@@ -12,6 +12,7 @@ public class Message {
     private int mType;
     private String mMessage;
     private String mUsername;
+    private long mTimeStamp;
 
     private Message() {}
 
@@ -26,6 +27,8 @@ public class Message {
     public String getUsername() {
         return mUsername;
     };
+
+    public long getTimeStamp() { return  mTimeStamp; };
 
 
     public static class Builder {
@@ -52,6 +55,7 @@ public class Message {
             message.mType = mType;
             message.mUsername = mUsername;
             message.mMessage = mMessage;
+            message.mTimeStamp = System.currentTimeMillis();
             return message;
         }
     }

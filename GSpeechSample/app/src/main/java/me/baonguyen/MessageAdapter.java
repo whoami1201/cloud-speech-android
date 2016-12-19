@@ -1,4 +1,4 @@
-package me.yurifariasg;
+package me.baonguyen;
 
 import android.content.Context;
 import android.support.v7.widget.RecyclerView;

@@ -1,4 +1,4 @@
-package me.yurifariasg;
+package me.baonguyen;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -37,7 +37,7 @@ import java.io.InputStream;
 import java.util.List;
 
 import io.grpc.ManagedChannel;
-import me.yurifariasg.utils.AudioUtils;
+import me.baonguyen.utils.AudioUtils;
 
 public class MainActivity extends AppCompatActivity implements StreamingRecognizeClient.StreamingRecognizeClientListener {
 
@@ -75,7 +75,7 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
         mWavFileName = mRawFileName + "/test-new.wav";
         mRawFileName += "/test.amr";
     }
-    
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -399,6 +399,7 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
                 @Override
                 public void run() {
 //                    JSONObject data = (JSONObject) args[0];
+                    Log.i("args",args.toString());
 //                    String message;
 //                    try {
 //                        message = data.getString("message");

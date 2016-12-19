@@ -1,4 +1,4 @@
-package me.yurifariasg;
+package me.baonguyen;
 
 import android.app.Application;
 
