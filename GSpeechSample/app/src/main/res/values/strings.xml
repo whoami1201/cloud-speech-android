@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">AppLa Demo</string>
+    <string name="app_name">AppLa</string>
     <string name="start_recording">Start Recording</string>
     <string name="stop_recording">Stop Recording</string>
     <string name="clear_text">Clear Texts</string>
@@ -14,7 +14,11 @@
     <string name="error_field_required">Field Required!</string>
     <string name="prompt_message">message</string>
     <string name="action_send">send</string>
-    <string name="title_activity_login">Login</string>
+    <string name="title_activity_login">AppLa Login</string>
+    <string name="prompt_password">Password</string>
+    <string name="drawer_open">Open</string>
+    <string name="drawer_close">Close</string>
+    <string name="navigation">Navigation</string>
     <string-array name="languages">
         <item>en</item>
         <item>fi</item>

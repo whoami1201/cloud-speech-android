@@ -74,4 +74,5 @@ dependencies {
     compile 'com.google.android.gms:play-services-base:9.6.1'
     compile 'com.facebook.network.connectionclass:connectionclass:1.0.1'
     compile 'com.github.nkzawa:socket.io-client:0.3.0'
+    compile 'com.koushikdutta.ion:ion:2.+'
 }

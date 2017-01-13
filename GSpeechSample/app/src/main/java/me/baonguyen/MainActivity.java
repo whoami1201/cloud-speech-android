@@ -2,21 +2,28 @@ package me.baonguyen;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.os.Environment;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.util.TypedValue;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -28,6 +35,11 @@ import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.security.ProviderInstaller;
 import com.google.cloud.speech.v1beta1.StreamingRecognizeResponse;
+import com.google.gson.JsonObject;
+import com.koushikdutta.ion.Ion;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -35,13 +47,19 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Random;
+import java.util.concurrent.ExecutionException;
 
 import io.grpc.ManagedChannel;
 import me.baonguyen.utils.AudioUtils;
 
+import static me.baonguyen.Constants.PREFS_NAME;
+import static me.baonguyen.Constants.SERVER_URL;
+
 public class MainActivity extends AppCompatActivity implements StreamingRecognizeClient.StreamingRecognizeClientListener {
 
     private static final String HOSTNAME = "speech.googleapis.com";
+
     private static final int PORT = 443;
     private static final int RECORDER_SAMPLERATE = 16000;
     private static final int RECORDER_CHANNELS = AudioFormat.CHANNEL_IN_MONO;
@@ -65,10 +83,16 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
     private MediaPlayer mPlayer;
     private TextView textOutput;
     private long mLastT;
-    private Socket mSocket;
+    private Socket mSocket = null;
     private String mUsername;
     private List<Message> mMessages;
-    private RecyclerView.Adapter mAdapter;
+    private ArrayAdapter<String> mAdapter;
+    private String accessToken;
+    private SharedPreferences sharedPreferences;
+    private String messageId = "";
+    private ListView mDrawerList;
+    private ActionBarDrawerToggle mDrawerToggle;
+    private DrawerLayout mDrawerLayout;
 
     public MainActivity() {
         mRawFileName = Environment.getExternalStorageDirectory().getAbsolutePath();
@@ -81,6 +105,14 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        getSupportActionBar().setHomeButtonEnabled(true);
+
+        mDrawerList = (ListView) findViewById(R.id.navList);
+        mDrawerLayout = (DrawerLayout)findViewById(R.id.drawer_layout);
+        addDrawerItems();
+        setupDrawer();
+
         mBufferSize = AudioRecord.getMinBufferSize(RECORDER_SAMPLERATE, AudioFormat
                 .CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT) * 2;
 
@@ -90,17 +122,17 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
                 RECORDER_AUDIO_ENCODING,
                 mBufferSize);
 
-        mAdapter = new MessageAdapter(this, mMessages);
+//        mAdapter = new MessageAdapter(this, mMessages);
         initialize();
-        AppLa app = (AppLa) getApplication();
-        mSocket = app.getSocket();
-        mSocket.on(Socket.EVENT_CONNECT, onConnect);
-        mSocket.on(Socket.EVENT_CONNECT_ERROR, onConnectError);
-        mSocket.on("chat message", onNewMessage);
 
-        mSocket.connect();
-
-        startSignIn();
+        sharedPreferences = getSharedPreferences(PREFS_NAME, 0);
+        accessToken = sharedPreferences.getString("accessToken", "");
+        if (accessToken.equals("")) {
+            startSignIn();
+        } else {
+            checkSignIn();
+        }
+//        Log.i("accessToken", accessToken);
 
         Spinner spinner = (Spinner) findViewById(R.id.language_spinner);
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
@@ -146,8 +178,12 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
             }
         });
 
+        messageId = randomString();
+
         mPlayRecordingBt = (Button) findViewById(R.id.play_bt);
         mPlayRecordingBt.setOnClickListener(new View.OnClickListener(){
+            int count = 0;
+
             @Override
             public void onClick(View v) {
                 if (mIsRecording) {
@@ -159,6 +195,11 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
                     startPlayingRecord();
                 }
                 mIsPlaying = !mIsPlaying;
+//                count++;
+//                JSONObject message = makeMessage(messageId, "Count is: " + count, accessToken);
+//                if (mSocket!=null) {
+//                    mSocket.emit("messages/send/incomplete", message);
+//                }
             }
         });
 
@@ -171,9 +212,101 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
                     stopRecording();
                 }
                 clearTexts();
-
+//                JSONObject message = makeMessage(messageId, "FINAL!", accessToken);
+//                if (mSocket!=null) {
+//                    mSocket.emit("messages/send/complete", message);
+//                }
+//                messageId = randomString();
             }
         });
+
+    }
+
+    private void addDrawerItems() {
+        String[] menuArray = { "Home", "All Rooms", "Sign Out" };
+        mAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, menuArray);
+        mDrawerList.setAdapter(mAdapter);
+        mDrawerList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Toast.makeText(MainActivity.this, "Position= " + position + " - Id= " +id, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void setupDrawer() {
+        mDrawerToggle = new ActionBarDrawerToggle(this, mDrawerLayout, R.string.drawer_open, R.string.drawer_close) {
+
+            /** Called when a drawer has settled in a completely open state. */
+            public void onDrawerOpened(View drawerView) {
+                super.onDrawerOpened(drawerView);
+                getSupportActionBar().setTitle(R.string.navigation);
+                invalidateOptionsMenu(); // creates call to onPrepareOptionsMenu()
+            }
+
+            /** Called when a drawer has settled in a completely closed state. */
+            public void onDrawerClosed(View view) {
+                super.onDrawerClosed(view);
+                getSupportActionBar().setTitle(getTitle().toString());
+                invalidateOptionsMenu(); // creates call to onPrepareOptionsMenu()
+            }
+        };
+
+        mDrawerToggle.setDrawerIndicatorEnabled(true);
+        mDrawerLayout.addDrawerListener(mDrawerToggle);
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        mDrawerToggle.onConfigurationChanged(newConfig);
+    }
+
+    @Override
+    protected void onPostCreate(Bundle savedInstanceState) {
+        super.onPostCreate(savedInstanceState);
+        mDrawerToggle.syncState();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+
+        // Activate the navigation drawer toggle
+        if (mDrawerToggle.onOptionsItemSelected(item)) {
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void checkSignIn() {
+        try {
+            JsonObject result = Ion.with(getApplicationContext())
+                    .load( SERVER_URL + "/api/users/isSignedIn" )
+                    .setHeader("x-access-token", accessToken)
+                    .asJsonObject().get();
+            boolean success = result.get("success").getAsBoolean();
+            String message = result.get("message").getAsString();
+            if (!success) {
+                startSignIn();
+                Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
+            } else {
+                initSocket(accessToken);
+                Toast.makeText(getApplicationContext(), "Logged in!", Toast.LENGTH_SHORT).show();
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
     }
 
     private void startSignIn() {
@@ -189,6 +322,17 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
         }
     }
 
+    private void initSocket(String accessToken) {
+        saveToken(accessToken);
+        AppLa app = (AppLa) getApplication();
+        app.initSocket(accessToken);
+        mSocket = app.getSocket();
+        mSocket.on(Socket.EVENT_CONNECT, onConnect);
+        mSocket.on(Socket.EVENT_CONNECT_ERROR, onConnectError);
+        mSocket.on("chat message", onNewMessage);
+        mSocket.connect();
+    }
+
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -197,10 +341,17 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
             return;
         }
 
-        mUsername = data.getStringExtra("username");
-        int numUsers = data.getIntExtra("numUsers", 1);
-
+        initSocket(data.getStringExtra("token"));
     }
+
+    private void saveToken(String accessToken) {
+        sharedPreferences = getSharedPreferences(PREFS_NAME, 0);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+
+        editor.putString("accessToken", accessToken);
+        editor.apply();
+    }
+
 
     private void stopRecording() {
         mIsRecording = false;
@@ -326,14 +477,24 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
                 Log.e(MainActivity.class.getSimpleName(), "Error", e);
             }
         }
-        mSocket.disconnect();
-        mSocket.off(Socket.EVENT_CONNECT, onConnect);
-        mSocket.off(Socket.EVENT_CONNECT_ERROR, onConnectError);
-        mSocket.off("chat message", onNewMessage);
-
+        if (mSocket != null) {
+            mSocket.disconnect();
+            mSocket.off(Socket.EVENT_CONNECT, onConnect);
+            mSocket.off(Socket.EVENT_CONNECT_ERROR, onConnectError);
+        }
     }
 
-
+    private static String randomString() {
+        Random generator = new Random();
+        StringBuilder randomStringBuilder = new StringBuilder();
+        int length = 8;
+        char tempChar;
+        for (int i = 0; i < length; i++){
+            tempChar = (char) (generator.nextInt(24) + 65);
+            randomStringBuilder.append(tempChar);
+        }
+        return randomStringBuilder.toString();
+    }
 
     @Override
     public void onUIResponseRefresh(final StreamingRecognizeResponse response, final StreamingRecognizeResponse lastResponse) {
@@ -361,16 +522,34 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
                         if (response.getResultsCount() > 0){
                             if (response.getResults(0).getAlternativesCount() > 0) {
                                 String script = response.getResults(0).getAlternatives(0).getTranscript();
+                                JSONObject message = makeMessage(messageId, script, accessToken);
                                 textOutput.setText(script);
 
-                                if (response.getResults(0).getIsFinal())
-                                    mSocket.emit("chat message", script);
+                                mSocket.emit("messages/send/incomplete", message);
+                                if (response.getResults(0).getIsFinal()) {
+                                    mSocket.emit("messages/send/complete", message);
+                                    messageId = randomString();
+                                }
                             }
                         }
                         break;
                 }
             }
+
+
         });
+    }
+
+    private JSONObject makeMessage(String messageId, String script, String accessToken) {
+        JSONObject message = new JSONObject();
+        try {
+            message.put("messageId", messageId);
+            message.put("message", script);
+            message.put("token", accessToken);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return message;
     }
 
     @Override
@@ -421,7 +600,7 @@ public class MainActivity extends AppCompatActivity implements StreamingRecogniz
                 @Override
                 public void run() {
                     if (!isConnected) {
-                        Toast.makeText(getApplicationContext(), "Connected!", Toast.LENGTH_LONG).show();
+//                        Toast.makeText(getApplicationContext(), "Connected!", Toast.LENGTH_LONG).show();
                         isConnected = true;
                     }
                 }
