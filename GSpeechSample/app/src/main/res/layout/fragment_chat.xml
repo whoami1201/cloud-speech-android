@@ -18,7 +18,16 @@
         android:scrollbars="vertical"
         android:scrollbarStyle="outsideOverlay"/>
 
-    <LinearLayout
+    <TextView
+        android:id="@+id/empty_view"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="5"
+        android:gravity="center"
+        android:text="@string/no_messages"
+        android:visibility="gone"/>
+
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingLeft="@dimen/activity_horizontal_margin"
@@ -31,14 +40,21 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/start_recording"
-            android:layout_marginRight="17dp"
-            android:layout_marginEnd="17dp"/>
+            android:layout_alignParentTop="true"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true" />
 
         <Spinner
         android:id="@+id/language_spinner"
         android:layout_width="100dp"
-        android:layout_height="wrap_content"/>
+        android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_toLeftOf="@+id/recording_bt"
+            android:layout_toStartOf="@+id/recording_bt"
+            android:layout_marginRight="21dp"
+            android:layout_marginEnd="21dp" />
 
-    </LinearLayout>
+    </RelativeLayout>
+
 
 </LinearLayout>

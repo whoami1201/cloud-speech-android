@@ -18,7 +18,9 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.github.nkzawa.emitter.Emitter;
@@ -78,6 +80,7 @@ public class ChatFragment extends Fragment implements StreamingRecognizeClient.S
     private SharedPreferences sharedPreferences;
     private String accessToken;
     private String messageId;
+    private TextView emptyView;
 
     public ChatFragment() {
         super();
@@ -113,6 +116,7 @@ public class ChatFragment extends Fragment implements StreamingRecognizeClient.S
         sharedPreferences = getActivity().getSharedPreferences(PREFS_NAME, 0);
         accessToken = sharedPreferences.getString("accessToken", "");
 
+
     }
 
 
@@ -131,7 +135,20 @@ public class ChatFragment extends Fragment implements StreamingRecognizeClient.S
         mMessagesView.setLayoutManager(new LinearLayoutManager(getActivity()));
         mMessagesView.setAdapter(mAdapter);
 
+        mRecordingBtn = (Button) view.findViewById(R.id.recording_bt);
         Spinner spinner = (Spinner) view.findViewById(R.id.language_spinner);
+
+        emptyView = (TextView) view.findViewById(R.id.empty_view);
+
+        if (mMessages.isEmpty()) {
+            mMessagesView.setVisibility(View.GONE);
+            emptyView.setVisibility(View.VISIBLE);
+        }
+        else {
+            mMessagesView.setVisibility(View.VISIBLE);
+            emptyView.setVisibility(View.GONE);
+        }
+
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(getActivity().getApplicationContext(),
                 R.array.languages, android.R.layout.simple_spinner_item);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -153,25 +170,31 @@ public class ChatFragment extends Fragment implements StreamingRecognizeClient.S
         });
 
 
-        mRecordingBtn = (Button) view.findViewById(R.id.recording_bt);
         mRecordingBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
 //                if (mIsPlaying) {
 //                    stopPlayingRecord();
 //                }
+                toggleEmptyView();
                 if (mIsRecording) {
                     stopRecording();
                 } else {
                     if (mAudioRecord.getState() == AudioRecord.STATE_INITIALIZED) {
                         mRecordingBtn.setText(R.string.stop_recording);
                         startRecording();
+
                     } else {
                         Log.i(getActivity().getClass().getSimpleName(), "Not Initialized yet.");
                     }
                 }
             }
         });
+
+
+    }
+
+    private void toggleEmptyView() {
 
 
     }
@@ -186,6 +209,19 @@ public class ChatFragment extends Fragment implements StreamingRecognizeClient.S
     private void readData() {
         byte sData[] = new byte[mBufferSize];
         while (mIsRecording) {
+            getActivity().runOnUiThread(new Runnable(){
+                @Override
+                public void run() {
+                    if (mMessagesView.getVisibility() == View.GONE) {
+                        if (!mMessages.isEmpty()) {
+                            mMessagesView.setVisibility(View.VISIBLE);
+                            emptyView.setVisibility(View.GONE);
+                        }
+                    }
+                }
+            });
+
+
             int bytesRead = mAudioRecord.read(sData, 0, mBufferSize);
             if (bytesRead > 0) {
                 try {
@@ -219,6 +255,8 @@ public class ChatFragment extends Fragment implements StreamingRecognizeClient.S
         mRecordingThread = new Thread(new Runnable() {
             public void run() {
                 readData();
+
+
 //                try {
 //                    outputStream.close();
 //                } catch (IOException io) {
