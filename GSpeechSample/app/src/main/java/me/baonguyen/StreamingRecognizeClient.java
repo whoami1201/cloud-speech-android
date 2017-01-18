@@ -55,7 +55,6 @@ public class StreamingRecognizeClient implements StreamObserver<StreamingRecogni
         this.mSamplingRate = samplingRate;
         this.mChannel = channel;
         this.listener = listener;
-        this.lastResponse = null;
 
         mSpeechClient = SpeechGrpc.newStub(channel);
     }
@@ -97,9 +96,8 @@ public class StreamingRecognizeClient implements StreamObserver<StreamingRecogni
     public void onNext(final StreamingRecognizeResponse response) {
         Log.i(getClass().getSimpleName(), "Received response: " + TextFormat.printToString(response));
         if(listener!=null) {
-            listener.onUIResponseRefresh(response, lastResponse);
+            listener.onUIResponseRefresh(response);
         }
-        lastResponse = response;
     }
 
 
@@ -138,7 +136,6 @@ public class StreamingRecognizeClient implements StreamObserver<StreamingRecogni
     }
 
     public void finish() {
-        lastResponse = null;
         Log.i(StreamingRecognizeClient.this.getClass().getSimpleName(), "onComplete.");
         if (requestObserver!=null) {
             requestObserver.onCompleted();
@@ -162,7 +159,7 @@ public class StreamingRecognizeClient implements StreamObserver<StreamingRecogni
     }
 
  public interface StreamingRecognizeClientListener {
-     void onUIResponseRefresh(StreamingRecognizeResponse response, StreamingRecognizeResponse lastResponse);
+     void onUIResponseRefresh(StreamingRecognizeResponse response);
      String onUISpinnerRefresh();
  }
 

@@ -25,7 +25,8 @@
             android:name="me.baonguyen.LoginActivity"
             android:label="@string/title_activity_login"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar"
-            android:windowSoftInputMode="adjustResize|stateVisible" >
+            android:windowSoftInputMode="adjustResize|stateVisible"
+            android:noHistory="true" android:excludeFromRecents="true">
         </activity>
     </application>
 

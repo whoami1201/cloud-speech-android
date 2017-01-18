@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <array name="username_colors">
-        <item>@color/username0</item>
-        <item>@color/username1</item>
-        <item>@color/username2</item>
-        <item>@color/username3</item>
-        <item>@color/username4</item>
-        <item>@color/username5</item>
-        <item>@color/username6</item>
-        <item>@color/username7</item>
-        <item>@color/username8</item>
-        <item>@color/username9</item>
-        <item>@color/username10</item>
-        <item>@color/username11</item>
+    <array name="name_colors">
+        <item>@color/name0</item>
+        <item>@color/name1</item>
+        <item>@color/name2</item>
+        <item>@color/name3</item>
+        <item>@color/name4</item>
+        <item>@color/name5</item>
+        <item>@color/name6</item>
+        <item>@color/name7</item>
+        <item>@color/name8</item>
+        <item>@color/name9</item>
+        <item>@color/name10</item>
+        <item>@color/name11</item>
     </array>
 </resources>

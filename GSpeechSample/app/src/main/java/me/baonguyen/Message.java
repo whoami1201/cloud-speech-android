@@ -5,43 +5,45 @@ package me.baonguyen;
  */
 
 public class Message {
-    public static final int TYPE_MESSAGE = 0;
-    public static final int TYPE_LOG = 1;
-    public static final int TYPE_ACTION = 2;
-
-    private int mType;
     private String mMessage;
-    private String mUsername;
-    private long mTimeStamp;
+    private String mFirstName;
+    private String mLastName;
+    private String mMessageId;
+    private int mTimeStamp;
 
     private Message() {}
-
-    public int getType() {
-        return mType;
-    };
 
     public String getMessage() {
         return mMessage;
     };
 
-    public String getUsername() {
-        return mUsername;
+    public String getMessageId() { return mMessageId; };
+
+    public String getFullName() {
+        return mFirstName + " " + mLastName;
     };
 
-    public long getTimeStamp() { return  mTimeStamp; };
+    public String getFirstName() { return mFirstName; };
+
+    public String getLastName() { return mLastName; };
+
+    public int getTimeStamp() { return  mTimeStamp; };
 
 
     public static class Builder {
-        private final int mType;
-        private String mUsername;
+        private String mFirstName;
+        private String mLastName;
         private String mMessage;
+        private String mMessageId;
+        private int mTimeStamp;
 
-        public Builder(int type) {
-            mType = type;
+        public Builder firstName(String firstName) {
+            mFirstName = firstName;
+            return this;
         }
 
-        public Builder username(String username) {
-            mUsername = username;
+        public Builder lastName(String lastName) {
+            mLastName = lastName;
             return this;
         }
 
@@ -50,13 +52,24 @@ public class Message {
             return this;
         }
 
+        public Builder messageId(String messageId) {
+            mMessageId = messageId;
+            return this;
+        }
+
         public Message build() {
             Message message = new Message();
-            message.mType = mType;
-            message.mUsername = mUsername;
+            message.mFirstName = mFirstName;
+            message.mLastName = mLastName;
+            message.mMessageId = mMessageId;
             message.mMessage = mMessage;
-            message.mTimeStamp = System.currentTimeMillis();
+            message.mTimeStamp = mTimeStamp;
             return message;
+        }
+
+        public Builder timeStamp(int timeStamp) {
+            mTimeStamp = timeStamp;
+            return this;
         }
     }
 }
