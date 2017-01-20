@@ -1,4 +1,4 @@
-package me.baonguyen;
+package me.baonguyen.models;
 
 /**
  * Created by bao on 01/11/2016.
@@ -37,22 +37,22 @@ public class Message {
         private String mMessageId;
         private int mTimeStamp;
 
-        public Builder firstName(String firstName) {
+        public Builder setFirstName(String firstName) {
             mFirstName = firstName;
             return this;
         }
 
-        public Builder lastName(String lastName) {
+        public Builder setLastName(String lastName) {
             mLastName = lastName;
             return this;
         }
 
-        public Builder message(String message) {
+        public Builder setMessage(String message) {
             mMessage = message;
             return this;
         }
 
-        public Builder messageId(String messageId) {
+        public Builder setMessageId(String messageId) {
             mMessageId = messageId;
             return this;
         }

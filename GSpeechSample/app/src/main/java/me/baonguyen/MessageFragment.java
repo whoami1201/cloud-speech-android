@@ -2,13 +2,13 @@ package me.baonguyen;
 
 
 import android.app.Activity;
-import android.app.Fragment;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Bundle;
+import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -18,10 +18,8 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.github.nkzawa.emitter.Emitter;
 import com.github.nkzawa.socketio.client.Socket;
@@ -30,21 +28,18 @@ import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.security.ProviderInstaller;
 import com.google.cloud.speech.v1beta1.StreamingRecognizeResponse;
-import com.google.protobuf.TextFormat;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
 import io.grpc.ManagedChannel;
-import me.baonguyen.utils.AudioUtils;
+import me.baonguyen.models.Message;
+import me.baonguyen.adapters.MessageAdapter;
 
 import static me.baonguyen.Constants.PREFS_NAME;
 import static me.baonguyen.utils.Utils.randomString;
@@ -54,7 +49,7 @@ import static me.baonguyen.utils.Utils.randomString;
  * Created by bao on 17/01/2017.
  */
 
-public class ChatFragment extends Fragment implements StreamingRecognizeClient.StreamingRecognizeClientListener {
+public class MessageFragment extends Fragment implements StreamingRecognizeClient.StreamingRecognizeClientListener {
 
     private static final String HOSTNAME = "speech.googleapis.com";
 
@@ -82,7 +77,7 @@ public class ChatFragment extends Fragment implements StreamingRecognizeClient.S
     private String messageId;
     private TextView emptyView;
 
-    public ChatFragment() {
+    public MessageFragment() {
         super();
     }
 
@@ -91,6 +86,13 @@ public class ChatFragment extends Fragment implements StreamingRecognizeClient.S
         super.onAttach(context);
         Activity activity = context instanceof Activity ? (Activity) context : null;
         mAdapter = new MessageAdapter(activity, mMessages);
+        initSocket();
+    }
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        clear();
     }
 
     @Override
@@ -115,8 +117,6 @@ public class ChatFragment extends Fragment implements StreamingRecognizeClient.S
 
         sharedPreferences = getActivity().getSharedPreferences(PREFS_NAME, 0);
         accessToken = sharedPreferences.getString("accessToken", "");
-
-
     }
 
 
@@ -124,7 +124,7 @@ public class ChatFragment extends Fragment implements StreamingRecognizeClient.S
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_chat, container, false);
+        return inflater.inflate(R.layout.fragment_message, container, false);
     }
 
     @Override
@@ -176,7 +176,6 @@ public class ChatFragment extends Fragment implements StreamingRecognizeClient.S
 //                if (mIsPlaying) {
 //                    stopPlayingRecord();
 //                }
-                toggleEmptyView();
                 if (mIsRecording) {
                     stopRecording();
                 } else {
@@ -194,16 +193,16 @@ public class ChatFragment extends Fragment implements StreamingRecognizeClient.S
 
     }
 
-    private void toggleEmptyView() {
-
-
-    }
-
     public void initSocket() {
         AppLa app = (AppLa) getActivity().getApplication();
         mSocket = app.getSocket();
-        mSocket.on("messages/received", onNewMessage);
-        mSocket.connect();
+        if (mSocket!=null) {
+            mSocket.on("messages/received", onNewMessage);
+            mSocket.connect();
+        } else {
+
+        }
+
     }
 
     private void readData() {
@@ -311,7 +310,7 @@ public class ChatFragment extends Fragment implements StreamingRecognizeClient.S
                     InputStream credentials = getActivity().getAssets().open("credentials.json");
                     channel = StreamingRecognizeClient.createChannel(
                             HOSTNAME, PORT, credentials);
-                    mStreamingClient = new StreamingRecognizeClient(channel, RECORDER_SAMPLERATE, ChatFragment.this);
+                    mStreamingClient = new StreamingRecognizeClient(channel, RECORDER_SAMPLERATE, MessageFragment.this);
                 } catch (Exception e) {
                     Log.e(MainActivity.class.getSimpleName(), "Error", e);
                 }
@@ -324,6 +323,9 @@ public class ChatFragment extends Fragment implements StreamingRecognizeClient.S
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                if (mSocket==null) {
+                    initSocket();
+                }
                 StreamingRecognizeResponse.EndpointerType endPointerType = response.getEndpointerType();
                 switch (endPointerType){
                     case ENDPOINTER_EVENT_UNSPECIFIED:
@@ -381,11 +383,11 @@ public class ChatFragment extends Fragment implements StreamingRecognizeClient.S
 
     private void addMessage(String firstName, String lastName, String messageId, int timeStamp, String message) {
         Message newMessage = new Message.Builder()
-                .firstName(firstName)
-                .lastName(lastName)
-                .messageId(messageId)
+                .setFirstName(firstName)
+                .setLastName(lastName)
+                .setMessageId(messageId)
                 .timeStamp(timeStamp)
-                .message(message).build();
+                .setMessage(message).build();
         int index = 0;
         boolean messageFinal = true;
         for (int i = 0; i<mMessages.size(); i++) {
@@ -414,6 +416,10 @@ public class ChatFragment extends Fragment implements StreamingRecognizeClient.S
 
         @Override
         public void call(final Object... args) {
+
+            if (getActivity() == null)
+                return;
+
             getActivity().runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -457,4 +463,13 @@ public class ChatFragment extends Fragment implements StreamingRecognizeClient.S
         }
     };
 
+    public void clear() {
+        mMessages.clear();
+        mAdapter.notifyDataSetChanged();
+        if (mSocket!=null) {
+            mSocket.disconnect();
+            mSocket = null;
+        }
+
+    }
 }

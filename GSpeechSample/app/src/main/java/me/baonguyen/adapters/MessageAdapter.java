@@ -1,18 +1,18 @@
-package me.baonguyen;
+package me.baonguyen.adapters;
 
 import android.content.Context;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
-import java.util.TimeZone;
+
+import me.baonguyen.R;
+import me.baonguyen.models.Message;
+
+import static me.baonguyen.utils.Utils.getTimeFromTimeStamp;
 
 /**
  * Created by bao on 01/11/2016.
@@ -56,7 +56,7 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
         private TextView mMessageView;
         private TextView mTimeStampView;
 
-        public ViewHolder(View itemView) {
+        private ViewHolder(View itemView) {
             super(itemView);
 
             mFullNameView = (TextView) itemView.findViewById(R.id.fullName);
@@ -64,7 +64,7 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
             mTimeStampView = (TextView) itemView.findViewById(R.id.timeStamp);
         }
 
-        public void setFullName(String fullName) {
+        private void setFullName(String fullName) {
             if (null == mFullNameView) return;
             mFullNameView.setText(fullName);
             mFullNameView.setTextColor(getUsernameColor(fullName));
@@ -75,13 +75,10 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
             mMessageView.setText(message);
         }
 
-        public void setTimeStamp(int timeStamp) {
+        private void setTimeStamp(int timeStamp) {
             if (null == mTimeStampView) return;
-            long mils = (long) timeStamp * 1000;
-            Date date = new Date(mils);
-            SimpleDateFormat format = new SimpleDateFormat("HH:mm", Locale.getDefault());
-            format.setTimeZone(TimeZone.getDefault());
-            String dateString = format.format(date);
+
+            String dateString = getTimeFromTimeStamp(timeStamp);
             mTimeStampView.setText(dateString);
         }
 

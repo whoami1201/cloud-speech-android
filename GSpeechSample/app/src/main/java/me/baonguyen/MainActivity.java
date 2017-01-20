@@ -5,9 +5,12 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -23,8 +26,10 @@ import java.util.concurrent.ExecutionException;
 
 import static me.baonguyen.Constants.PREFS_NAME;
 import static me.baonguyen.Constants.SERVER_URL;
+import static me.baonguyen.RoomFragment.ACCESS_TOKEN;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity
+    implements RoomFragment.OnListFragmentInteractionListener {
 
     private static final int REQUEST_LOGIN = 0;
 
@@ -34,6 +39,7 @@ public class MainActivity extends AppCompatActivity {
     private ListView mDrawerList;
     private ActionBarDrawerToggle mDrawerToggle;
     private DrawerLayout mDrawerLayout;
+    private MessageFragment messageFragment;
 
 
     @Override
@@ -48,9 +54,9 @@ public class MainActivity extends AppCompatActivity {
 
         mDrawerList = (ListView) findViewById(R.id.navList);
         mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
+
         addDrawerItems();
         setupDrawer();
-
 
         sharedPreferences = getSharedPreferences(PREFS_NAME, 0);
         accessToken = sharedPreferences.getString("accessToken", "");
@@ -60,10 +66,23 @@ public class MainActivity extends AppCompatActivity {
             checkSignIn();
         }
 
+
+        if (findViewById(R.id.drawer_layout) != null) {
+            if (savedInstanceState != null) {
+                return;
+            }
+            messageFragment = new MessageFragment();
+
+            getSupportFragmentManager().beginTransaction()
+                    .add(R.id.drawer_layout, messageFragment)
+                    .commit();
+
+        }
+
     }
 
     private void addDrawerItems() {
-        String[] menuArray = { "Home", "All Rooms", "Log Out" };
+        String[] menuArray = { "Home", "Rooms", " Out" };
         mAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, menuArray);
         mDrawerList.setAdapter(mAdapter);
         mDrawerList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -73,11 +92,45 @@ public class MainActivity extends AppCompatActivity {
             }
 
             private void selectDrawerItem(int position) {
+                Fragment fragment = null;
+                Class fragmentClass = null;
                 switch (position) {
+                    case 0:
+                        fragmentClass = MessageFragment.class;
+                        break;
+                    case 1:
+                        fragmentClass = RoomFragment.class;
+                        break;
                     case 2: // Sign Out
+                        messageFragment.clear();
                         saveToken("");
                         startSignIn();
+                        break;
                 }
+                try {
+                    if (fragmentClass == null)
+                        return;
+                    fragment = (Fragment) fragmentClass.newInstance();
+                    if (fragmentClass == RoomFragment.class) {
+                        Bundle args = new Bundle();
+                        args.putString(ACCESS_TOKEN, accessToken);
+                        fragment.setArguments(args);
+                    }
+                } catch (InstantiationException e) {
+                    e.printStackTrace();
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }
+
+                FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+                transaction.replace(R.id.drawer_layout, fragment);
+//                transaction.addToBackStack(null);
+                transaction.disallowAddToBackStack();
+                // Commit the transaction
+                transaction.commit();
+
+                mDrawerLayout.closeDrawers();
+
             }
 
 
@@ -89,6 +142,8 @@ public class MainActivity extends AppCompatActivity {
 
             /** Called when a drawer has settled in a completely open state. */
             public void onDrawerOpened(View drawerView) {
+                mDrawerList.bringToFront();
+                mDrawerLayout.requestLayout();
                 super.onDrawerOpened(drawerView);
                 getSupportActionBar().setTitle(R.string.navigation);
                 invalidateOptionsMenu(); // creates call to onPrepareOptionsMenu()
@@ -165,20 +220,18 @@ public class MainActivity extends AppCompatActivity {
     private void initSocket(String accessToken) {
         saveToken(accessToken);
         AppLa app = (AppLa) getApplication();
-        app.initSocket(accessToken);
-        ChatFragment fragment = (ChatFragment) getFragmentManager().findFragmentById(R.id.fragment_chat);
-        fragment.initSocket();
+        app.initSocket(accessToken, false);
     }
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (Activity.RESULT_OK != resultCode) {
+        if (resultCode != Activity.RESULT_OK) {
             this.finish();
             return;
         }
-
-        initSocket(data.getStringExtra("token"));
+        accessToken = data.getStringExtra("token");
+        initSocket(accessToken);
     }
 
     private void saveToken(String accessToken) {
@@ -194,6 +247,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
 
+    }
+
+    public void onRoomSelected(String roomSlug) {
+        Log.i("RoomSlug: ", roomSlug);
     }
 
 

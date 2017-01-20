@@ -15,12 +15,14 @@ import java.net.URISyntaxException;
 public class AppLa extends Application {
     private Socket mSocket = null;
 
-    public void initSocket(String token) {
+    public void initSocket(String token, boolean isRoom) {
         {
             try {
                 IO.Options options = new IO.Options();
                 options.query = "token="+token;
-                mSocket = IO.socket(Constants.SERVER_URL, options);
+                String hostUrl = isRoom ? Constants.SERVER_URL + "/rooms" : Constants.SERVER_URL;
+                mSocket = IO.socket(hostUrl, options);
+
             } catch (URISyntaxException e) {
                 e.printStackTrace();
             }
