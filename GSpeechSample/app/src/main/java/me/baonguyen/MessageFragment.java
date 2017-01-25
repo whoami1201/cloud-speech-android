@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.test.ActivityTestCase;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -76,6 +77,7 @@ public class MessageFragment extends Fragment implements StreamingRecognizeClien
     private String accessToken;
     private String messageId;
     private TextView emptyView;
+    private TextView roomInfoView;
 
     public MessageFragment() {
         super();
@@ -86,6 +88,7 @@ public class MessageFragment extends Fragment implements StreamingRecognizeClien
         super.onAttach(context);
         Activity activity = context instanceof Activity ? (Activity) context : null;
         mAdapter = new MessageAdapter(activity, mMessages);
+//        if (mSocket!=null) return;
         initSocket();
     }
 
@@ -139,6 +142,12 @@ public class MessageFragment extends Fragment implements StreamingRecognizeClien
         Spinner spinner = (Spinner) view.findViewById(R.id.language_spinner);
 
         emptyView = (TextView) view.findViewById(R.id.empty_view);
+        roomInfoView = (TextView) view.findViewById(R.id.room_text);
+
+        String roomName = getArguments().getString("roomName");
+        String firstName = getArguments().getString("firstName");
+
+        roomInfoView.setText("Hi " + firstName + "! You're in room: " + roomName);
 
         if (mMessages.isEmpty()) {
             mMessagesView.setVisibility(View.GONE);
@@ -184,7 +193,7 @@ public class MessageFragment extends Fragment implements StreamingRecognizeClien
                         startRecording();
 
                     } else {
-                        Log.i(getActivity().getClass().getSimpleName(), "Not Initialized yet.");
+                        Log.i(getActivity().getClass().getSimpleName(), "Not Initialized yet. Please check permissions.");
                     }
                 }
             }
@@ -194,13 +203,12 @@ public class MessageFragment extends Fragment implements StreamingRecognizeClien
     }
 
     public void initSocket() {
+        if (getActivity() == null) return;
         AppLa app = (AppLa) getActivity().getApplication();
         mSocket = app.getSocket();
         if (mSocket!=null) {
             mSocket.on("messages/received", onNewMessage);
             mSocket.connect();
-        } else {
-
         }
 
     }
@@ -208,6 +216,11 @@ public class MessageFragment extends Fragment implements StreamingRecognizeClien
     private void readData() {
         byte sData[] = new byte[mBufferSize];
         while (mIsRecording) {
+
+            if (getActivity() == null) {
+                return;
+            }
+
             getActivity().runOnUiThread(new Runnable(){
                 @Override
                 public void run() {
@@ -320,10 +333,17 @@ public class MessageFragment extends Fragment implements StreamingRecognizeClien
 
     @Override
     public void onUIResponseRefresh(final StreamingRecognizeResponse response) {
+
+        if (getActivity() == null) {
+            Log.i(getClass().getSimpleName(), "onUIResponseRefresh getActivity() returns null");
+            return;
+        }
+
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 if (mSocket==null) {
+                    Log.i(getClass().getSimpleName(),"mSocket is null. Init socket.");
                     initSocket();
                 }
                 StreamingRecognizeResponse.EndpointerType endPointerType = response.getEndpointerType();
@@ -363,9 +383,8 @@ public class MessageFragment extends Fragment implements StreamingRecognizeClien
         if (mSocket!=null) {
             mSocket.disconnect();
             mSocket.off(Socket.EVENT_CONNECT, onConnect);
-            mSocket.off(Socket.EVENT_CONNECT_ERROR, onConnectError);
-            mSocket.off(Socket.EVENT_CONNECT_TIMEOUT, onConnectError);
             mSocket.off("messages/received", onNewMessage);
+            mSocket = null;
         }
     }
 
@@ -417,8 +436,10 @@ public class MessageFragment extends Fragment implements StreamingRecognizeClien
         @Override
         public void call(final Object... args) {
 
-            if (getActivity() == null)
+            if (getActivity() == null) {
+                Log.i(getClass().getSimpleName(), "onNewMessage getActivity() returns null");
                 return;
+            }
 
             getActivity().runOnUiThread(new Runnable() {
                 @Override
@@ -464,10 +485,12 @@ public class MessageFragment extends Fragment implements StreamingRecognizeClien
     };
 
     public void clear() {
+
         mMessages.clear();
         mAdapter.notifyDataSetChanged();
         if (mSocket!=null) {
             mSocket.disconnect();
+            mSocket.off("messages/received", onNewMessage);
             mSocket = null;
         }
 

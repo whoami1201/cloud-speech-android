@@ -37,8 +37,11 @@
         android:textColor="?android:textColorPrimary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:textSize="14sp"
         android:paddingLeft="@dimen/margin"
         android:paddingRight="@dimen/margin"
         android:paddingTop="@dimen/top_margin"
-        android:text="Hello there"/>
+        android:paddingBottom="10dp"
+        android:background="@drawable/curved_bg"
+        android:text="Hello there ansdasdhqweqwheqweqwe qweqwejlqwejlasjd alsdj as;d jasdjqw pejqwepqwe qwpejqweqw"/>
 </LinearLayout>

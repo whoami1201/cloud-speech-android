@@ -24,32 +24,19 @@ import me.baonguyen.adapters.RoomAdapter;
 import static me.baonguyen.Constants.SERVER_URL;
 
 
-/**
- * A fragment representing a list of Items.
- * <p/>
- * Activities containing this fragment MUST implement the {@link OnListFragmentInteractionListener}
- * interface.
- */
 public class RoomFragment extends Fragment {
 
     private RecyclerView.Adapter mAdapter;
     private List<Room> mRooms = new ArrayList<>();
 
-    // TODO: Customize parameter argument names
     public static final String ACCESS_TOKEN = "accessToken";
-    // TODO: Customize parameters
     private OnListFragmentInteractionListener mListener;
     private String mAccessToken;
     private RecyclerView mRoomView;
 
-    /**
-     * Mandatory empty constructor for the fragment manager to instantiate the
-     * fragment (e.g. upon screen orientation changes).
-     */
     public RoomFragment() {
     }
 
-    // TODO: Customize parameter initialization
     @SuppressWarnings("unused")
     public static RoomFragment newInstance(String accessToken) {
         RoomFragment fragment = new RoomFragment();

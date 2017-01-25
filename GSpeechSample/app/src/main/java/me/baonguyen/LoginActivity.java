@@ -102,9 +102,7 @@ public class LoginActivity extends AppCompatActivity {
                     if (success){
                         String token = json.getString("token");
                         Intent intent = new Intent();
-                        intent.putExtra("username", mUsername);
                         intent.putExtra("token", token);
-
                         setResult(RESULT_OK, intent);
                         finish();
                     } else {
